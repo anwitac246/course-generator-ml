@@ -12,7 +12,7 @@ export default function Course() {
     style: '',
     time: '',
     prior: '',
-    device: ''
+    device: '',
   });
   const [loading, setLoading] = useState(false);
   const [course, setCourse] = useState(null);
@@ -37,7 +37,7 @@ export default function Course() {
           script.onload = resolve;
           script.onerror = () => reject(new Error('Failed to load vanta.globe.js'));
           document.body.appendChild(script);
-        })
+        }),
       ]);
 
       if (window.VANTA?.GLOBE) {
@@ -51,7 +51,7 @@ export default function Course() {
           scale: 1.0,
           scaleMobile: 1.0,
           color: 0x48a6a7,
-          backgroundColor: 0x000000
+          backgroundColor: 0x000000,
         });
       }
     };
@@ -79,7 +79,7 @@ export default function Course() {
     try {
       const response = await axios.post('http://localhost:5000/generate-course', {
         ...formData,
-        level
+        level,
       });
 
       setCourse(response.data);
@@ -109,12 +109,17 @@ export default function Course() {
           {['topic', 'goal', 'style', 'time', 'prior', 'device'].map((field) => (
             <div key={field}>
               <label htmlFor={field} className="text-white text-sm mb-2 block font-medium">
-                {field === 'topic' ? 'Topic' :
-                  field === 'goal' ? 'Your Goal' :
-                  field === 'style' ? 'Preferred Learning Style' :
-                  field === 'time' ? 'Weekly Time Commitment' :
-                  field === 'prior' ? 'Prior Knowledge' :
-                  'Preferred Device (Optional)'}
+                {field === 'topic'
+                  ? 'Topic'
+                  : field === 'goal'
+                  ? 'Your Goal'
+                  : field === 'style'
+                  ? 'Preferred Learning Style'
+                  : field === 'time'
+                  ? 'Weekly Time Commitment'
+                  : field === 'prior'
+                  ? 'Prior Knowledge'
+                  : 'Preferred Device (Optional)'}
               </label>
               <input
                 type="text"
@@ -123,12 +128,17 @@ export default function Course() {
                 onChange={handleChange}
                 required={field !== 'device'}
                 placeholder={
-                  field === 'topic' ? 'e.g. React, Web3, AI, Python...' :
-                  field === 'goal' ? 'e.g. Prepare for a job, build a project...' :
-                  field === 'style' ? 'e.g. One-shot videos, interactive...' :
-                  field === 'time' ? 'e.g. 4 hours per week, 1 hour daily...' :
-                  field === 'prior' ? 'e.g. No experience, some HTML/CSS...' :
-                  'e.g. Mobile, desktop, tablet...'
+                  field === 'topic'
+                    ? 'e.g. React, Web3, AI, Python...'
+                    : field === 'goal'
+                    ? 'e.g. Prepare for a job, build a project...'
+                    : field === 'style'
+                    ? 'e.g. One-shot videos, interactive...'
+                    : field === 'time'
+                    ? 'e.g. 4 hours per week, 1 hour daily...'
+                    : field === 'prior'
+                    ? 'e.g. No experience, some HTML/CSS...'
+                    : 'e.g. Mobile, desktop, tablet...'
                 }
                 className="w-full py-3 px-4 rounded-lg bg-white/10 text-white placeholder:text-teal-200 border border-teal-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 backdrop-blur-md"
               />
@@ -140,10 +150,11 @@ export default function Course() {
               <button
                 key={lvl}
                 onClick={() => setLevel(lvl)}
-                className={`px-5 py-2 rounded-lg border text-sm font-medium transition-all duration-300 ${level === lvl
+                className={`px-5 py-2 rounded-lg border text-sm font-medium transition-all duration-300 ${
+                  level === lvl
                     ? 'bg-cyan-400 text-black border-cyan-300 shadow-md'
                     : 'bg-white/5 text-white border-teal-300 hover:bg-cyan-600 hover:text-black'
-                  }`}
+                }`}
               >
                 {lvl}
               </button>
@@ -170,10 +181,33 @@ export default function Course() {
             <pre className="whitespace-pre-wrap text-sm">{course.courseText}</pre>
 
             <h2 className="text-2xl font-bold">Recommended Videos</h2>
-            <pre className="whitespace-pre-wrap text-sm">{course.videos}</pre>
+            {Array.isArray(course.videos) && course.videos.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {course.videos.map(({ videoId, title, channel, thumbnail }) => (
+                  <div key={videoId} className="bg-white/10 p-3 rounded-lg shadow-md">
+                    <a
+                      href={`https://www.youtube.com/watch?v=${videoId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block mb-2"
+                    >
+                      <img src={thumbnail} alt={title} className="w-full rounded-md" />
+                    </a>
+                    <h3 className="text-lg font-semibold">{title}</h3>
+                    <p className="text-sm text-teal-300">{channel}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p>No videos available</p>
+            )}
 
             <h2 className="text-2xl font-bold">Quiz</h2>
-            <pre className="whitespace-pre-wrap text-sm">{course.quiz}</pre>
+            {course.quiz ? (
+              <pre className="whitespace-pre-wrap text-sm">{typeof course.quiz === 'string' ? course.quiz : JSON.stringify(course.quiz, null, 2)}</pre>
+            ) : (
+              <p>No quiz available</p>
+            )}
           </div>
         )}
       </div>
