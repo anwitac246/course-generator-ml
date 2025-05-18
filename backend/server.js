@@ -1,34 +1,40 @@
 
-import express from 'express';
-import cors from 'cors';
-import bodyParser from 'body-parser';
-import { generateCourse } from './service.js';
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const bodyParser = require('body-parser');
+const {
+  generateOutline,
+  generateCourseText,
+  fetchYouTubeVideos,
+} = require('./service');
 
 const app = express();
-const port = 5000;
-
 app.use(cors());
 app.use(bodyParser.json());
-app.get("/", (req, res) => {
-  res.send("Course generation backend is running!");
-});
+
 app.post('/generate-course', async (req, res) => {
   try {
-    const { topic, goal, style, time, prior, device, level } = req.body;
+    const formData = req.body;
 
-    if (!topic || !goal || !style || !time || !prior || !level) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
+    const outline = await generateOutline(formData);
 
-    const courseData = await generateCourse({ topic, goal, style, time, prior, device, level });
+    const courseText = await generateCourseText(outline, formData);
 
-    res.json(courseData);
+    const videos = await fetchYouTubeVideos(outline);
+
+    res.json({
+      outline,
+      courseText,
+      videos,
+    });
   } catch (error) {
-    console.error('Error in /generate-course:', error);
-    res.status(500).json({ error: 'Failed to generate course' });
+    console.error('Error generating course:', error.message);
+    res.status(500).json({ error: 'Failed to generate course content.' });
   }
 });
 
-app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
