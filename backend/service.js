@@ -1,11 +1,10 @@
-
-require('dotenv').config();
 const axios = require('axios');
-
+require('dotenv').config();
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 const GOOGLE_CX = process.env.GOOGLE_CX;
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
+//console.log('GROQ API Key:', GROQ_API_KEY);
 
 /**
  * Generates a course outline using the Groq API.
@@ -15,23 +14,28 @@ const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 async function generateOutline(formData) {
   const prompt = `Generate a detailed course outline for the topic "${formData.topic}" tailored for a ${formData.level} learner. The course should help achieve the goal: "${formData.goal}". Provide the outline as a numbered list of topics.`;
 
-  const response = await axios.post(
-    'https://api.groq.com/v1/chat/completions',
-    {
-      model: 'llama2-70b-chat',
-      messages: [{ role: 'user', content: prompt }],
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${GROQ_API_KEY}`,
-        'Content-Type': 'application/json',
+  try {
+    const response = await axios.post(
+      'https://api.groq.com/openai/v1/chat/completions',
+      {
+        model: 'llama3-70b-8192',
+        messages: [{ role: 'user', content: prompt }],
       },
-    }
-  );
+      {
+        headers: {
+          Authorization: `Bearer ${GROQ_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
 
-  const outlineText = response.data.choices[0].message.content;
-  const outline = outlineText.split('\n').filter(line => line.trim() !== '');
-  return outline;
+    const outlineText = response.data.choices[0].message.content;
+    const outline = outlineText.split('\n').filter(line => line.trim() !== '');
+    return outline;
+  } catch (error) {
+    console.error('Error generating outline:', error.message);
+    throw new Error('Failed to generate course outline.');
+  }
 }
 
 /**
@@ -40,18 +44,23 @@ async function generateOutline(formData) {
  * @returns {Promise<string>} - Concatenated content from top search results.
  */
 async function fetchContentForTopic(topic) {
-  const searchResponse = await axios.get('https://www.googleapis.com/customsearch/v1', {
-    params: {
-      key: GOOGLE_API_KEY,
-      cx: GOOGLE_CX,
-      q: topic,
-    },
-  });
+  try {
+    const searchResponse = await axios.get('https://www.googleapis.com/customsearch/v1', {
+      params: {
+        key: GOOGLE_API_KEY,
+        cx: GOOGLE_CX,
+        q: topic,
+      },
+    });
 
-  const snippets = searchResponse.data.items
-    .map(item => item.snippet)
-    .join('\n');
-  return snippets;
+    const snippets = searchResponse.data.items
+      .map(item => item.snippet)
+      .join('\n');
+    return snippets;
+  } catch (error) {
+    console.error(`Error fetching content for topic "${topic}":`, error.message);
+    return '';
+  }
 }
 
 /**
@@ -65,24 +74,29 @@ async function generateCourseText(outline, formData) {
 
   for (const topic of outline) {
     const content = await fetchContentForTopic(topic);
-    const prompt = `Using the following information:\n\n${content}\n\nWrite a comprehensive explanation on "${topic}" suitable for a ${formData.level} learner aiming to "${formData.goal}".`;
+    const prompt = `Using the following information:\n\n${content}\n\nWrite a comprehensive explanation on "${topic}" suitable for a ${formData.level} learner aiming to "${formData.goal}". Add all you know about that topic in extreme detail like the guy wants to do a PhD`;
 
-    const response = await axios.post(
-      'https://api.groq.com/v1/chat/completions',
-      {
-        model: 'llama2-70b-chat',
-        messages: [{ role: 'user', content: prompt }],
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${GROQ_API_KEY}`,
-          'Content-Type': 'application/json',
+    try {
+      const response = await axios.post(
+        'https://api.groq.com/openai/v1/chat/completions',
+        {
+          model: 'llama2-70b-chat',
+          messages: [{ role: 'user', content: prompt }],
         },
-      }
-    );
+        {
+          headers: {
+            Authorization: `Bearer ${GROQ_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
-    const topicText = response.data.choices[0].message.content;
-    courseText += `\n\n## ${topic}\n\n${topicText}`;
+      const topicText = response.data.choices[0].message.content;
+      courseText += `\n\n## ${topic}\n\n${topicText}`;
+    } catch (error) {
+      console.error(`Error generating course text for topic "${topic}":`, error.message);
+      courseText += `\n\n## ${topic}\n\nContent not available due to an error.`;
+    }
   }
 
   return courseText;
@@ -97,24 +111,28 @@ async function fetchYouTubeVideos(outline) {
   const videos = [];
 
   for (const topic of outline) {
-    const response = await axios.get('https://www.googleapis.com/youtube/v3/search', {
-      params: {
-        key: YOUTUBE_API_KEY,
-        q: topic,
-        part: 'snippet',
-        maxResults: 1,
-        type: 'video',
-      },
-    });
-
-    const item = response.data.items[0];
-    if (item) {
-      videos.push({
-        videoId: item.id.videoId,
-        title: item.snippet.title,
-        channel: item.snippet.channelTitle,
-        thumbnail: item.snippet.thumbnails.default.url,
+    try {
+      const response = await axios.get('https://www.googleapis.com/youtube/v3/search', {
+        params: {
+          key: YOUTUBE_API_KEY,
+          q: topic,
+          part: 'snippet',
+          maxResults: 1,
+          type: 'video',
+        },
       });
+
+      const item = response.data.items[0];
+      if (item) {
+        videos.push({
+          videoId: item.id.videoId,
+          title: item.snippet.title,
+          channel: item.snippet.channelTitle,
+          thumbnail: item.snippet.thumbnails.default.url,
+        });
+      }
+    } catch (error) {
+      console.error(`Error fetching YouTube video for topic "${topic}":`, error.message);
     }
   }
 

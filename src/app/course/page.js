@@ -82,6 +82,10 @@ export default function Course() {
         level,
       });
 
+      if (!response.data || !response.data.outline) {
+        throw new Error('No outline returned');
+      }
+
       setCourse(response.data);
     } catch (err) {
       console.error('Failed to generate course:', err);
@@ -94,13 +98,12 @@ export default function Course() {
   return (
     <>
       <Navbar />
-      <div ref={vantaRef} className="min-h-screen w-full text-white relative font-sans">
+      <div ref={vantaRef} className="min-h-screen w-full text-white relative font-sans bg-black">
         <style>
           {`* { cursor: url('https://cdn.custom-cursor.com/db/3542/32/matrix_code_pointer.png'), auto; }`}
         </style>
 
         <div className="relative z-10 flex flex-col lg:flex-row w-full min-h-screen p-8 gap-10">
-      
           <div className="w-full lg:w-1/2 bg-white/10 backdrop-blur-md rounded-2xl shadow-xl px-8 py-10 space-y-6 border border-white/20">
             <h1 className="text-3xl font-bold text-white text-center">Build Your Custom Course</h1>
             <p className="text-sm text-center text-teal-100">Choose your topic and expertise level to get started</p>
@@ -169,7 +172,6 @@ export default function Course() {
             </button>
           </div>
 
-       
           {course && (
             <div className="w-full lg:w-2/3 space-y-8">
               <div className="bg-black/60 rounded-xl p-6 border border-white/20">
@@ -186,8 +188,8 @@ export default function Course() {
                 <h2 className="text-2xl font-bold mb-4">🎥 Recommended Videos</h2>
                 {Array.isArray(course.videos) && course.videos.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {course.videos.map(({ videoId, title, channel, thumbnail }) => (
-                      <div key={videoId} className="bg-white/10 p-3 rounded-lg shadow-md">
+                    {course.videos.map(({ videoId, title, channel, thumbnail }, idx) => (
+                      <div key={`${videoId}-${idx}`} className="bg-white/10 p-3 rounded-lg shadow-md">
                         <a
                           href={`https://www.youtube.com/watch?v=${videoId}`}
                           target="_blank"
